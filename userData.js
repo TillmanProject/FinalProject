@@ -1,0 +1,1 @@
+var Vari = "hello world";
