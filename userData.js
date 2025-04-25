@@ -19,7 +19,6 @@ const taskSchema = new mongoose.Schema
 
 const task = mongoose.model('Task', taskSchema);
 
-// Useful functions 
 // Add new entry
 function addTask (name, description, startDur, endDur, completed, tasKID) 
 {
