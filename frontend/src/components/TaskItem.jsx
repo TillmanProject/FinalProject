@@ -39,6 +39,7 @@ const getCategoryColor = (category) => {
 };
 
 const TaskItem = ({ task }) => {
+  console.log("TaskItem", task);
   const { toggleTaskCompletion, updateTask, deleteTask } = useTasks();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -48,7 +49,7 @@ const TaskItem = ({ task }) => {
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    updateTask(task.id, {
+    updateTask(task._id, {
       title: editTitle,
       description: editDescription,
     });
@@ -65,14 +66,14 @@ const TaskItem = ({ task }) => {
         <div className="flex items-start gap-3">
           <Checkbox
             checked={task.completed}
-            onCheckedChange={() => toggleTaskCompletion(task.id)}
-            id={`task-${task.id}`}
+            onCheckedChange={() => toggleTaskCompletion(task._id)}
+            id={`task-${task._id}`}
             className="mt-1"
           />
 
           <div className="flex-grow">
             <label
-              htmlFor={`task-${task.id}`}
+              htmlFor={`task-${task._id}`}
               className={`block text-base font-medium cursor-pointer ${
                 task.completed ? "line-through text-muted-foreground" : ""
               }`}
@@ -151,7 +152,7 @@ const TaskItem = ({ task }) => {
               </Dialog>
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-600"
-                onSelect={() => deleteTask(task.id)}
+                onSelect={() => deleteTask(task._id)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
@@ -167,7 +168,6 @@ const TaskItem = ({ task }) => {
         >
           {task.category}
         </Badge>
-        <span>{new Date(task.createdAt).toLocaleDateString()}</span>
       </CardFooter>
     </Card>
   );

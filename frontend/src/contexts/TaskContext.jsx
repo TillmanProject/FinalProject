@@ -1,83 +1,131 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { useAuth } from "./AuthContext";
 
-// Create the context
 const TaskContext = createContext(undefined);
 
-// Sample tasks for demonstration
-const sampleTasks = [
-  {
-    id: "1",
-    title: "Complete project proposal",
-    description: "Finish the TaskTango project proposal with all requirements",
-    completed: false,
-    category: "Work",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    title: "Buy groceries",
-    description: "Milk, eggs, bread, and vegetables",
-    completed: true,
-    category: "Personal",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    title: "Workout session",
-    description: "30 minutes cardio and strength training",
-    completed: false,
-    category: "Health",
-    createdAt: new Date().toISOString(),
-  },
-];
-
-// Provider component
 export function TaskProvider({ children }) {
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem("taskTangoTasks");
-    return savedTasks ? JSON.parse(savedTasks) : sampleTasks;
-  });
+  const [tasks, setTasks] = useState([]);
+  const { user } = useAuth();
 
-  // Save tasks to localStorage whenever they change
+  const fetchTasks = useCallback(async () => {
+    if (!user?.token) {
+      console.warn("No user token available. Skipping task fetch.");
+      return;
+    }
+    try {
+      const response = await fetch("http://localhost:3000/tasks", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch tasks");
+      }
+
+      const data = await response.json();
+      setTasks(data);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    }
+  }, [user?.token]);
+
   useEffect(() => {
-    localStorage.setItem("taskTangoTasks", JSON.stringify(tasks));
-  }, [tasks]);
+    if (user?.token) {
+      fetchTasks();
+    }
+  }, [user?.token, fetchTasks]);
 
-  // Add new task
-  const addTask = (task) => {
-    const newTask = {
-      ...task,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-    };
-    setTasks([newTask, ...tasks]);
+  const addTask = async (task) => {
+    try {
+      const response = await fetch("http://localhost:3000/tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(task),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add task");
+      }
+
+      const newTask = await response.json();
+      setTasks([newTask, ...tasks]);
+    } catch (error) {
+      console.error("Error adding task:", error);
+    }
   };
 
-  // Update existing task
-  const updateTask = (id, updatedTask) => {
-    setTasks(
-      tasks.map((task) => (task.id === id ? { ...task, ...updatedTask } : task))
-    );
+  const updateTask = async (id, updatedTask) => {
+    try {
+      const response = await fetch(`http://localhost:3000/tasks/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(updatedTask),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update task");
+      }
+
+      setTasks(
+        tasks.map((task) =>
+          task._id === id ? { ...task, ...updatedTask } : task
+        )
+      );
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
   };
 
   // Delete a task
-  const deleteTask = (id) => {
-    setTasks(tasks.filter((task) => task.id !== id));
+  const deleteTask = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:3000/tasks/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete task");
+      }
+
+      setTasks(tasks.filter((task) => task._id !== id));
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
   };
 
   // Toggle completion status
-  const toggleTaskCompletion = (id) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+  const toggleTaskCompletion = async (id) => {
+    console.log("Toggling task completion for ID:", id);
+    const task = tasks.find((task) => task._id === id);
+    if (!task) return;
+
+    const updatedTask = { completed: !task.completed };
+    await updateTask(id, updatedTask);
   };
 
   return (
     <TaskContext.Provider
       value={{
         tasks,
+        fetchTasks,
         addTask,
         updateTask,
         deleteTask,

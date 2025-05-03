@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTasks } from "../contexts/TaskContext";
+import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -20,6 +21,7 @@ const TaskForm = () => {
   const [category, setCategory] = useState("Work");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { addTask } = useTasks();
+  const { user } = useAuth();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -31,6 +33,7 @@ const TaskForm = () => {
       description: description.trim(),
       category,
       completed: false,
+      userId: user.id,
     });
 
     // Reset form

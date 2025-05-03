@@ -1,75 +1,93 @@
 import { createContext, useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
-// Create the context with a default value
 const AuthContext = createContext(undefined);
 
-// Mock user database
-const mockUsers = [{ id: "1", email: "demo@example.com", name: "Demo User" }];
+const isTokenValid = (token) => {
+  try {
+    const { exp } = jwtDecode(token);
+    return Date.now() < exp * 1000;
+  } catch (error) {
+    return false;
+  }
+};
 
-// Provider component
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("taskUser");
-    return savedUser ? JSON.parse(savedUser) : null;
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      if (isTokenValid(parsedUser.token)) {
+        return parsedUser;
+      }
+      localStorage.removeItem("taskUser");
+    }
+    return null;
   });
+
   const navigate = useNavigate();
 
-  // Check if user is authenticated
   const isAuthenticated = !!user;
 
   // Login function
   const login = async (email, password) => {
-    // In a real app, this would be an API call
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const foundUser = mockUsers.find((u) => u.email === email);
+    try {
+      const response = await fetch("http://localhost:3000/users/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-        if (foundUser && password === "password") {
-          // Simple password check
-          setUser(foundUser);
-          localStorage.setItem("taskUser", JSON.stringify(foundUser));
-          navigate("/dashboard");
-          resolve();
-        } else {
-          reject(new Error("Invalid credentials"));
-        }
-      }, 1000); // Simulate network delay
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Invalid credentials");
+      }
+
+      const foundUser = await response.json();
+
+      setUser(foundUser);
+      localStorage.setItem("taskUser", JSON.stringify(foundUser));
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
   };
 
   // Signup function
   const signup = async (name, email, password) => {
-    // In a real app, this would be an API call
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (mockUsers.some((u) => u.email === email)) {
-          reject(new Error("Email already in use"));
-          return;
-        }
+    try {
+      const response = await fetch("http://localhost:3000/users/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-        // Create new user
-        const newUser = {
-          id: String(mockUsers.length + 1),
-          email,
-          name,
-        };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to sign up");
+      }
 
-        mockUsers.push(newUser);
-        setUser(newUser);
-        localStorage.setItem("taskTangoUser", JSON.stringify(newUser));
+      const newUser = await response.json();
 
-        navigate("/dashboard");
-        resolve();
-      }, 1000); // Simulate network delay
-    });
+      setUser(newUser);
+      localStorage.setItem("taskUser", JSON.stringify(newUser));
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Signup error:", error);
+      throw error;
+    }
   };
 
   // Logout function
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("taskTangoUser");
-
+    localStorage.removeItem("taskUser");
     navigate("/login");
   };
 

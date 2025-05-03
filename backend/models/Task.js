@@ -2,10 +2,10 @@
 const mongoose = require("mongoose");
 
 const taskSchema = new mongoose.Schema({
-  taskTitle: { type: String, required: true },
-  taskDescription: { type: String },
-  taskCompleted: { type: Boolean, required: true },
-  taskCategory: { type: Boolean, required: true },
+  title: { type: String, required: true },
+  description: { type: String },
+  category: { type: String, required: true },
+  completed: { type: Boolean, required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 });
 
